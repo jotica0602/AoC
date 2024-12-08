@@ -1,0 +1,1 @@
+if not (incr or decr): continue
