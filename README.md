@@ -1,3 +1,1 @@
-This is my Advent of Code journey.
-Enjoy!!!
-:)
+This is my Advent of Code journey :)
