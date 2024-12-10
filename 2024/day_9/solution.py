@@ -51,6 +51,7 @@ class day9:
     def solve_part2(self):
         return -1
 
+
 solver = day9()
 print(solver.solve_part1())
 print(solver.solve_part2())
