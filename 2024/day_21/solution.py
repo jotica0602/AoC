@@ -1,8 +1,4 @@
-from collections import deque
-from functools import cache
 from itertools import product
-import re
-import sys
 
 def neighbors(vx,vy):
     pos = [(0,-1,'<'),(0,1,'>'),(-1,0,'^'),(1,0,'v')]
@@ -20,7 +16,7 @@ def dfs(grid,x,y):
         dfs_visit(x,y,grid,distances,moves,'',0)
         for key in moves:
             minlen = min(map(len,moves[key]))
-            moves[key] = set(move for move in moves[key] if len(move) == minlen)
+            moves[key] = list(move for move in moves[key] if len(move) == minlen)
         return moves
             
 def dfs_visit(vx,vy,grid,distances,moves,path,actual):
@@ -33,65 +29,106 @@ def dfs_visit(vx,vy,grid,distances,moves,path,actual):
         moves[grid[nx][ny]].append(path + move + 'A')
         dfs_visit(nx,ny,grid,distances,moves,path + move, actual + 1)
         
-def get_min_len(seqs):
-    return min(list(map(len,seqs)))
+      
+def get_seqs(message,kpmoves):
+    x = message[0]
+    y = message[1]
+    
+    seqs = kpmoves[x][y]
+    message = message[1:]
+    for i in range(len(message)-1):
+        x = message[i]
+        y = message[i+1]
+        seqs = [s1+s2 for s1,s2 in product(seqs,kpmoves[x][y])]
+    return seqs
 
-def get_moves(from_,to,message,moves):
-    if message in moves[from_]:
-        return moves[from_][message]
-    
-    if len(message) == 1:
-        return moves[from_][to]
-    
-    seqs = get_moves(message[0],message[1],message[1:],moves)
-    m = [a + b for a,b in product(moves[from_][to],seqs)]
-    minlen = get_min_len(m)
-    m = [seq for seq in m if len(seq) == minlen]
-    moves[from_][message] = m
-    return m
+def get_min_len(x,y,dpmoves,cache,depth=1):
+    if (x,y,depth) in cache:
+        return cache[(x,y,depth)]
 
-def get_next_seq(seqs,moves):
-    nextseq = []
-    for seq in seqs:
-        nextseq += get_moves('A',seq[0],seq,moves)
-    minlen = get_min_len(nextseq)
-    nextseq = [seq for seq in nextseq if len(seq) == minlen]
-    return nextseq
+    if depth == 0: 
+        return len(dpmoves[x][y][0])
     
+    best = float('inf')
+    for seq in dpmoves[x][y]:
+        length = 0
+        for a,b in zip('A'+seq,seq):
+            length += get_min_len(a,b,dpmoves,cache,depth-1)
+        best = min(length,best)
+    
+    cache[(x,y,depth)] = best
+    return best
+
 class day21:
     def solve_part1(self):
         with open('input.txt','r') as file:
             text = file.read()
         
         messages = text.split('\n')
-        kb = [
+        keypad = [
                 ['7','8','9'],
                 ['4','5','6'],
                 ['1','2','3'],
                 ['*','0','A']
             ]
-        controller = [
+        dirpad = [
                         ['*','^','A'],
                         ['<','v','>']
                     ]
         
-        kbmoves = {kb[i][j]: dfs(kb,i,j) for i in range(len(kb)) for j in range(len(kb[0])) if kb[i][j] != '*'}
-        ctmoves = {controller[i][j]: dfs(controller,i,j) for i in range(len(controller)) for j in range(len(controller[0])) if controller[i][j] != '*'}
+        kpmoves = {keypad[i][j]: dfs(keypad,i,j) for i in range(len(keypad)) for j in range(len(keypad[0])) if keypad[i][j] != '*'}
+        dpmoves = {dirpad[i][j]: dfs(dirpad,i,j) for i in range(len(dirpad)) for j in range(len(dirpad[0])) if dirpad[i][j] != '*'}
+        cache = {}
 
-        # It can be improved using memoization
         ans = 0
-        
         for message in messages:
-            seqs = get_next_seq([message],kbmoves)
-            for i in range(2):
-                si = get_next_seq(seqs,ctmoves)
-                seqs = si
+            seqs = get_seqs('A' + message,kpmoves)
+            minlen = float('inf')
             
-            ans += get_min_len(seqs) * int(re.findall(r'\d+',message)[0])
+            for seq in seqs:
+                length = 0
+                for x,y in zip('A'+seq,seq):
+                    length += get_min_len(x,y,dpmoves,cache)
+                minlen = min(minlen,length)
+                
+            ans += minlen * int(message[:len(message)-1])
+                    
         return ans
     
     def solve_part2(self):
-        pass
+        with open('input.txt','r') as file:
+            text = file.read()
+        
+        messages = text.split('\n')
+        keypad = [
+                ['7','8','9'],
+                ['4','5','6'],
+                ['1','2','3'],
+                ['*','0','A']
+            ]
+        dirpad = [
+                        ['*','^','A'],
+                        ['<','v','>']
+                    ]
+        
+        kpmoves = {keypad[i][j]: dfs(keypad,i,j) for i in range(len(keypad)) for j in range(len(keypad[0])) if keypad[i][j] != '*'}
+        dpmoves = {dirpad[i][j]: dfs(dirpad,i,j) for i in range(len(dirpad)) for j in range(len(dirpad[0])) if dirpad[i][j] != '*'}
+        cache = {}
+
+        ans = 0
+        for message in messages:
+            seqs = get_seqs('A' + message,kpmoves)
+            minlen = float('inf')
+            
+            for seq in seqs:
+                length = 0
+                for x,y in zip('A'+seq,seq):
+                    length += get_min_len(x,y,dpmoves,cache,24)
+                minlen = min(minlen,length)
+                
+            ans += minlen * int(message[:len(message)-1])
+                    
+        return ans
     
 
 solver = day21()
