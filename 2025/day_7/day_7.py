@@ -1,9 +1,9 @@
 from functools import cache
 with open('input.txt') as file:
     grid = [list(line.strip()) for line in file.readlines()]
+    n,m = len(grid), len(grid[0])
 
 def solve(part):
-    n,m = len(grid), len(grid[0])
     sx,sy = (0,0)
     found = False
     for i in range(n):
@@ -13,23 +13,25 @@ def solve(part):
                 found = True
                 break
         if found: break
-    
+
     ans = 0
     if part == 1:
-        ans = bfs(sx,sy,n,m)
+        ans = bfs(sx,sy)
     if part == 2:
-        ans = dfs(sx,sy,n,m)
+        ans = dp(sx,sy)
+        # ans = dfs(sx,sy)
     return ans
 
-def add(x:int, y:int, visited:set,q:list[int], n:int, m:int):
-    if 0 <= x < n and 0 <= y < m and (x,y) not in visited:
+def is_valid(x,y):
+    n,m = len(grid),len(grid[0])
+    return 0 <= x < n and 0 <= y < m
+
+def add(x:int, y:int, visited:set,q:list[int]):
+    if is_valid(x,y) and (x,y) not in visited:
         visited.add((x,y))
         q.append((x,y))
 
-def is_valid(x,y,n,m):
-    return 0 <= x < n and 0 <= y < m
-
-def bfs(sx,sy,n,m):
+def bfs(sx,sy):
     q = [(sx,sy)]
     ans = 0
     visited = set()
@@ -37,29 +39,42 @@ def bfs(sx,sy,n,m):
     while q:
         vx,vy = q.pop(0)
         if grid[vx][vy] == 'S' or grid[vx][vy] == '.':
-            add(vx+1,vy,visited,q,n,m)
+            add(vx+1,vy,visited,q)
         if grid[vx][vy] == '^':
             ans += 1
-            add(vx,vy-1,visited,q,n,m)
-            add(vx,vy+1,visited,q,n,m)
-
+            add(vx,vy-1,visited,q)
+            add(vx,vy+1,visited,q)
     return ans
 
+# full dp solution
+def dp(x,y):
+    dp = [[0] * m for _ in range(n)]
+    dp[x][y] = 1
+    for i in range(n):
+        for j in range(m):
+            if is_valid(i+1,j) and grid[i+1][j] == '.':
+                dp[i+1][j] += dp[i][j]
+            if is_valid(i+1,j) and grid[i+1][j] == '^' and is_valid(i+1,j-1):
+                dp[i+1][j-1] += dp[i][j]
+            if is_valid(i+1,j) and grid[i+1][j] == '^' and is_valid(i+1,j+1):
+                dp[i+1][j+1] += dp[i][j]
+    return sum(dp[n-1])
+
+# recursive + memo
 @cache
-def dfs(x,y,n,m):
+def dfs(x,y):
     if x == n - 1: 
         return 1
-    if grid[x][y] == 'S' or grid[x][y] == '.' and is_valid(x+1,y,n,m):
-        return dfs(x+1,y,n,m)
+    if grid[x][y] == 'S' or grid[x][y] == '.' and is_valid(x+1,y):
+        return dfs(x+1,y)
     if grid[x][y] == '^':
         l = 0
         r = 0
-        if is_valid(x,y-1,n,m):
-            l = dfs(x,y-1,n,m)
-        if is_valid(x,y+1,n,m):
-            r = dfs(x,y+1,n,m)
+        if is_valid(x,y-1):
+            l = dfs(x,y-1)
+        if is_valid(x,y+1):
+            r = dfs(x,y+1)
         return l + r
-    
 
 print(solve(part=1))
 print(solve(part=2))
