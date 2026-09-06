@@ -1,30 +1,27 @@
 import re
-import sys
-with open('input.txt') as file:
-    text = file.read()
-    lines = text.split(sep='\n')
+from collections import defaultdict
 
-pattern = r'\d+'
-seeds = [int(x) for x in re.findall(pattern,lines[0])]
-result = sys.maxsize
+sp = r'seeds: ((?:\d+\s)+)'
+mp = r'map:\s((?:\d+\s)+)'
+with open('input.txt') as f:
+    lines = f.read()
 
-def map(x,a,b,c) -> tuple[int,bool]:
-    if x < b or x > b + c - 1: 
-        return (x, False)
-    else: 
-        return (x - b + a, True)
-     
+seeds = list(map(int,re.findall(sp,lines)[0].strip().split()))
+mps = [l.strip().split('\n') for l in re.findall(mp,lines)]
+maps = defaultdict(list[list[int]])
+
+for m in range(len(mps)):
+    for i in range(len(mps[m])):
+        maps[m].append(list(map(int,mps[m][i].split())))
+
+p1 = float('inf')
 for seed in seeds:
-    plot = (seed, False)
-    for i in range(1,len(lines)):
-        if lines[i] == '' or lines[i][0].isalpha():
-            plot = (plot[0], False)
-        elif not plot[1]:
-            ranges = [int(x) for x in re.findall(pattern,lines[i])]
-            plot = map(plot[0], ranges[0], ranges[1], ranges[2])
-        if i == len(lines) - 1:
-            # print(f'location: {plot[0]}')
-            result = min(result, plot[0])
-            
-print(result)
-print('end')
+    x = seed
+    for m in maps:
+        for i in range(len(maps[m])):
+            c,a,b = maps[m][i]
+            if a <= x <= (a + b) - 1:
+                x = (x - a) + c
+                break
+    p1 = min(p1,x)
+print(p1)
